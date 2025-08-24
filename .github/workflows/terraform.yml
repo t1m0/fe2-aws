@@ -1,0 +1,58 @@
+name: "Terraform"
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+jobs:
+  terraform:
+    name: "Terraform"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./terraform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Terraform Format
+        run: terraform fmt -check
+
+      - name: Terraform Init
+        env:
+          BACKEND_BUCKET: ${{ secrets.BACKEND_BUCKET }}
+          BACKEND_KEY: ${{ secrets.BACKEND_KEY }}
+        run: terraform init -backend-config="bucket=$BACKEND_BUCKET" -backend-config="key=$BACKEND_KEY" -backend-config="region=eu-central-1"
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        env:
+          TF_VAR_fe2_registry_email: ${{ secrets.FE2_REGISTRY_EMAIL }}
+          TF_VAR_fe2_registry_password: ${{ secrets.FE2_REGISTRY_PASSWORD }}
+        run: terraform plan -input=false
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          TF_VAR_fe2_registry_email: ${{ secrets.FE2_REGISTRY_EMAIL }}
+          TF_VAR_fe2_registry_password: ${{ secrets.FE2_REGISTRY_PASSWORD }}
+        run: terraform apply -auto-approve -input=false

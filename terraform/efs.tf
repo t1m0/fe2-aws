@@ -43,3 +43,63 @@ resource "aws_security_group_rule" "efs_ingress_from_db" {
   source_security_group_id = aws_security_group.db.id
   description              = "Allow EFS traffic from DB SG"
 }
+
+resource "aws_backup_vault" "main" {
+  name = "${local.project_name}-backup-vault"
+}
+
+resource "aws_backup_plan" "daily" {
+  name = "${local.project_name}-daily-backup"
+
+  rule {
+    rule_name         = "daily-tue-sun"
+    target_vault_name = aws_backup_vault.main.name
+    schedule          = "cron(0 5 ? * TUE-SUN *)"
+
+    lifecycle {
+      delete_after = 7
+    }
+  }
+
+  rule {
+    rule_name         = "weekly-monday"
+    target_vault_name = aws_backup_vault.main.name
+    schedule          = "cron(0 5 ? * MON *)"
+
+    lifecycle {
+      delete_after = 30
+    }
+  }
+}
+
+resource "aws_iam_role" "backup" {
+  name = "${local.project_name}-backup-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "backup.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "backup" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
+  role       = aws_iam_role.backup.name
+}
+
+resource "aws_backup_selection" "efs" {
+  iam_role_arn = aws_iam_role.backup.arn
+  name         = "${local.project_name}-efs-backup-selection"
+  plan_id      = aws_backup_plan.daily.id
+
+  resources = [
+    aws_efs_file_system.main[0].arn
+  ]
+}

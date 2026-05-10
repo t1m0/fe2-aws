@@ -48,6 +48,8 @@ jobs:
         env:
           TF_VAR_fe2_registry_email: ${{ secrets.FE2_REGISTRY_EMAIL }}
           TF_VAR_fe2_registry_password: ${{ secrets.FE2_REGISTRY_PASSWORD }}
+          TF_VAR_docker_hub_user: ${{ secrets.DOCKER_HUB_USER }}
+          TF_VAR_docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
         run: terraform plan -input=false
 
       - name: Terraform Apply
@@ -55,4 +57,6 @@ jobs:
         env:
           TF_VAR_fe2_registry_email: ${{ secrets.FE2_REGISTRY_EMAIL }}
           TF_VAR_fe2_registry_password: ${{ secrets.FE2_REGISTRY_PASSWORD }}
+          TF_VAR_docker_hub_user: ${{ secrets.DOCKER_HUB_USER }}
+          TF_VAR_docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
         run: terraform apply -auto-approve -input=false

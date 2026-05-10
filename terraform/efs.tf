@@ -2,8 +2,12 @@ resource "aws_efs_file_system" "main" {
   count            = 1
   creation_token   = "${local.project_name}-efs"
   performance_mode = "generalPurpose"
-  throughput_mode  = "bursting"
+  throughput_mode  = "elastic"
   encrypted        = true
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_efs_mount_target" "main" {

@@ -8,3 +8,4 @@ Thumbs.db
 *.tfstate
 *.hcl
 tfplan
+local.tfvars

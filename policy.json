@@ -1,0 +1,27 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "BackupManagement",
+			"Effect": "Allow",
+			"Action": [
+				"backup:*",
+				"backup-storage:*"
+			],
+			"Resource": [
+				"arn:aws:backup:eu-central-1:590184114913:*:*",
+				"arn:aws:backup-storage:eu-central-1:590184114913:*"
+			]
+		},
+		{
+			"Sid": "KMSManagement",
+			"Effect": "Allow",
+			"Action": [
+				"kms:*"
+			],
+			"Resource": [
+				"arn:aws:kms:eu-central-1:590184114913:*"
+			]
+		}
+	]
+}

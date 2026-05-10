@@ -8,7 +8,7 @@ resource "aws_service_discovery_service" "mongodb" {
 
   dns_config {
     namespace_id   = aws_service_discovery_private_dns_namespace.main.id
-    routing_policy = "MULTIVALUE" # Allows multiple IP addresses for the same DNS name
+    routing_policy = "WEIGHTED"
     dns_records {
       ttl  = 10
       type = "A"
@@ -27,19 +27,35 @@ module "access_point_db_data" {
 }
 
 module "mongodb" {
-  count      = local.mongodb_count
-  source     = "./modules/ecs-service"
-  aws_region = var.aws_region
-  name       = "mongodb"
-  image      = "mongo:6.0"
-  memory     = 2048
-
-  task_execution_role_arn = aws_iam_role.ecs-task-execution-role.arn
-  ecs_cluster_id          = aws_ecs_cluster.main.id
-  service_registry_arn    = aws_service_discovery_service.mongodb[0].arn
-  subnets                 = aws_subnet.private[*].id
-  security_groups         = [aws_security_group.db.id]
-  port                    = local.mongodb_port
+  count                              = local.mongodb_count
+  source                             = "./modules/ecs-service"
+  aws_region                         = var.aws_region
+  name                               = "mongodb"
+  image                              = "${aws_ecr_repository.mongo.repository_url}:7.0"
+  cpu                                = 2048
+  memory                             = 4096
+  cpu_architecture                   = "ARM64"
+  command                            = ["mongod", "--wiredTigerCacheSizeGB", "1.5"]
+  deployment_maximum_percent         = 100
+  deployment_minimum_healthy_percent = 0
+  availability_zone_rebalancing      = "DISABLED"
+  stop_timeout                       = 120
+  enable_circuit_breaker             = true
+  enable_execute_command             = true
+  health_check_grace_period_seconds  = 120
+  task_execution_role_arn            = aws_iam_role.ecs-task-execution-role.arn
+  ecs_cluster_id                     = aws_ecs_cluster.main.id
+  service_registry_arn               = aws_service_discovery_service.mongodb[0].arn
+  subnets                            = aws_subnet.private[*].id
+  security_groups                    = [aws_security_group.db.id]
+  port                               = local.mongodb_port
+  health_check = {
+    command     = ["bash", "-c", "mongosh --eval 'db.adminCommand({ping:1})' --quiet"]
+    interval    = 30
+    timeout     = 10
+    retries     = 3
+    startPeriod = 60
+  }
   mountPoints = [
     {
       sourceVolume  = "db-data-vol"

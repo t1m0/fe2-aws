@@ -13,3 +13,9 @@ resource "aws_ecr_repository" "main" {
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 }
+
+resource "aws_ecr_repository" "mongo" {
+  name                 = "mongo-ecr"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+}

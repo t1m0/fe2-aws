@@ -12,4 +12,8 @@ resource "aws_efs_access_point" "efs_access_point" {
       permissions = var.permissions
     }
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }

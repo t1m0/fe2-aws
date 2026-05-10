@@ -39,20 +39,23 @@ resource "aws_iam_role_policy" "ecs" {
             "elasticfilesystem:AccessedViaMountTarget" = "true"
           }
         }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ssmmessages:CreateControlChannel",
+          "ssmmessages:CreateDataChannel",
+          "ssmmessages:OpenControlChannel",
+          "ssmmessages:OpenDataChannel"
+        ]
+        Resource = "*"
       }
     ]
   })
 }
 
-resource "aws_ecs_task_definition" "ecs" {
-  family                   = "${var.name}-task"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = var.cpu
-  memory                   = var.memory
-  execution_role_arn       = var.task_execution_role_arn
-  task_role_arn            = aws_iam_role.ecs.arn
-  container_definitions = jsonencode([
+locals {
+  container_definition = merge(
     {
       name      = "${var.name}-container"
       image     = var.image
@@ -68,7 +71,8 @@ resource "aws_ecs_task_definition" "ecs" {
       ]
       environment = var.environment
       mountPoints = var.mountPoints
-
+      stopTimeout = var.stop_timeout
+      command     = var.command
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -77,8 +81,25 @@ resource "aws_ecs_task_definition" "ecs" {
           "awslogs-stream-prefix" = "ecs"
         }
       }
-    }
-  ])
+    },
+    var.health_check != null ? { healthCheck = var.health_check } : {}
+  )
+}
+
+resource "aws_ecs_task_definition" "ecs" {
+  family                   = "${var.name}-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = var.cpu
+  memory                   = var.memory
+  execution_role_arn       = var.task_execution_role_arn
+  task_role_arn            = aws_iam_role.ecs.arn
+  container_definitions    = jsonencode([local.container_definition])
+
+  runtime_platform {
+    cpu_architecture        = var.cpu_architecture
+    operating_system_family = "LINUX"
+  }
 
   dynamic "volume" {
     for_each = var.volumes
@@ -98,20 +119,30 @@ resource "aws_ecs_task_definition" "ecs" {
 }
 
 resource "aws_ecs_service" "ecs" {
-  name            = "${var.name}-service"
-  cluster         = var.ecs_cluster_id
-  task_definition = aws_ecs_task_definition.ecs.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  name                               = "${var.name}-service"
+  cluster                            = var.ecs_cluster_id
+  task_definition                    = aws_ecs_task_definition.ecs.arn
+  desired_count                      = 1
+  launch_type                        = "FARGATE"
+  deployment_maximum_percent         = var.deployment_maximum_percent
+  deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
+  availability_zone_rebalancing      = var.availability_zone_rebalancing
+  health_check_grace_period_seconds  = var.health_check_grace_period_seconds
 
-  health_check_grace_period_seconds = var.health_check_grace_period_seconds
+  enable_execute_command = var.enable_execute_command
 
-  # Force new deployment when task definition changes
-  force_new_deployment = true
+  force_new_deployment = var.force_new_deployment
 
-  # Ensure service is recreated when task definition changes
-  triggers = {
+  triggers = var.force_new_deployment ? {
     redeployment = plantimestamp()
+  } : {}
+
+  dynamic "deployment_circuit_breaker" {
+    for_each = var.enable_circuit_breaker ? [1] : []
+    content {
+      enable   = true
+      rollback = true
+    }
   }
 
   network_configuration {

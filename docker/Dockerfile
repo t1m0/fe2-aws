@@ -1,5 +1,5 @@
 # Inherit from the official FE2 base image
-FROM alamosgmbh/fe2:2.39-STABLE
+FROM alamosgmbh/fe2:2.40-STABLE
 
 # Install libc6-compat to fix "Error loading shared library ld-linux-x86-64.so.2"
 RUN apk add --no-cache libc6-compat

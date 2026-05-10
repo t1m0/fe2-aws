@@ -31,7 +31,7 @@ module "mongodb" {
   source     = "./modules/ecs-service"
   aws_region = var.aws_region
   name       = "mongodb"
-  image      = "mongo:5.0.29"
+  image      = "mongo:6.0"
   memory     = 2048
 
   task_execution_role_arn = aws_iam_role.ecs-task-execution-role.arn

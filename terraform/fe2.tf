@@ -32,7 +32,7 @@ module "fe2" {
   source                            = "./modules/ecs-service"
   aws_region                        = var.aws_region
   name                              = "fe2"
-  image                             = "${aws_ecr_repository.main.repository_url}:2.38"
+  image                             = "${aws_ecr_repository.main.repository_url}:2.39"
   task_execution_role_arn           = aws_iam_role.ecs-task-execution-role.arn
   ecs_cluster_id                    = aws_ecs_cluster.main.id
   alb_arn                           = aws_lb_target_group.app.arn

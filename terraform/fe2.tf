@@ -27,19 +27,27 @@ module "access_point_app_cacerts" {
 ## ECS Service
 
 module "fe2" {
-  count                             = local.fe2_count
-  depends_on                        = [module.mongodb]
-  source                            = "./modules/ecs-service"
-  aws_region                        = var.aws_region
-  name                              = "fe2"
-  image                             = "${aws_ecr_repository.main.repository_url}:2.40-new"
-  task_execution_role_arn           = aws_iam_role.ecs-task-execution-role.arn
-  ecs_cluster_id                    = aws_ecs_cluster.main.id
-  alb_arn                           = aws_lb_target_group.app.arn
+  count                   = local.fe2_count
+  depends_on              = [module.mongodb]
+  source                  = "./modules/ecs-service"
+  aws_region              = var.aws_region
+  name                    = "fe2"
+  image                   = "${aws_ecr_repository.main.repository_url}:2.40-new"
+  task_execution_role_arn = aws_iam_role.ecs-task-execution-role.arn
+  ecs_cluster_id          = aws_ecs_cluster.main.id
+  ports = [
+    {
+      port    = local.fe2_port
+      alb_arn = aws_lb_target_group.http.arn
+    },
+    {
+      port    = 443
+      alb_arn = aws_lb_target_group.https.arn
+    }
+  ]
   subnets                           = aws_subnet.private[*].id
   security_groups                   = [aws_security_group.app.id]
   health_check_grace_period_seconds = 240
-  port                              = local.fe2_port
   environment = [
     {
       name  = "FE2_EMAIL",
@@ -59,7 +67,15 @@ module "fe2" {
     },
     {
       name  = "CERTBOT_ENABLED",
-      value = "false"
+      value = "true"
+    },
+    {
+      name  = "CERTBOT_DOMAIN",
+      value = "alamos.fw-binzen.de"
+    },
+    {
+      name  = "CERTBOT_EMAIL",
+      value = "certbot@feuerwehr-binzen.de"
     },
     {
       name  = "FE2_IP_MONGODB",

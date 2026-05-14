@@ -48,7 +48,11 @@ module "mongodb" {
   service_registry_arn               = aws_service_discovery_service.mongodb[0].arn
   subnets                            = aws_subnet.private[*].id
   security_groups                    = [aws_security_group.db.id]
-  port                               = local.mongodb_port
+  ports = [
+    {
+      port = local.mongodb_port
+    }
+  ]
   health_check = {
     command     = ["bash", "-c", "mongosh --eval 'db.adminCommand({ping:1})' --quiet"]
     interval    = 30

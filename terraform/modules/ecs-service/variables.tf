@@ -28,13 +28,12 @@ variable "task_execution_role_arn" {
   type = string
 }
 
-variable "alb_arn" {
-  type    = string
-  default = null
-}
-
-variable "port" {
-  type = number
+variable "ports" {
+  description = "List of ports the container exposes. Each entry requires a 'port' number and an optional 'alb_arn' to attach a load-balancer target group."
+  type = list(object({
+    port    = number
+    alb_arn = optional(string, null)
+  }))
 }
 
 variable "service_registry_arn" {

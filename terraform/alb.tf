@@ -8,7 +8,7 @@ resource "aws_lb" "app" {
   enable_deletion_protection = false # Set to true for production
 }
 
-resource "aws_lb_target_group" "app" {
+resource "aws_lb_target_group" "http" {
   name        = "fe2-app-tg"
   port        = local.fe2_port
   protocol    = "HTTP"
@@ -34,7 +34,37 @@ resource "aws_lb_listener" "http" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+    target_group_arn = aws_lb_target_group.http.arn
+  }
+}
+
+resource "aws_lb_target_group" "https" {
+  name        = "fe2-app-tg"
+  port        = 443
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip" # Required for Fargate
+
+  health_check {
+    enabled             = true
+    path                = "/" # From fe2_app healthcheck: http://localhost:83/
+    protocol            = "HTTP"
+    port                = "traffic-port"
+    healthy_threshold   = 3
+    unhealthy_threshold = 5
+    timeout             = 10
+    matcher             = "200-499"
+  }
+}
+
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.app.arn
+  port              = 443
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.https.arn
   }
 }
 

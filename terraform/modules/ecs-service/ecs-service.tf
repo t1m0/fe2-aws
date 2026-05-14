@@ -63,9 +63,9 @@ locals {
       memory    = var.memory
       essential = true
       portMappings = [
-        {
-          containerPort = var.port
-          hostPort      = var.port
+        for p in var.ports : {
+          containerPort = p.port
+          hostPort      = p.port
           protocol      = "tcp"
         }
       ]
@@ -152,11 +152,11 @@ resource "aws_ecs_service" "ecs" {
   }
 
   dynamic "load_balancer" {
-    for_each = var.alb_arn != null ? [1] : []
+    for_each = [for p in var.ports : p if p.alb_arn != null]
     content {
-      target_group_arn = var.alb_arn
+      target_group_arn = load_balancer.value.alb_arn
       container_name   = "${var.name}-container"
-      container_port   = var.port
+      container_port   = load_balancer.value.port
     }
   }
 

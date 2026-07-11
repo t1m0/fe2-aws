@@ -24,8 +24,3 @@ variable "az_count" {
   type        = number
   default     = 2
 }
-
-variable "bastion" {
-  type    = number
-  default = 0
-}

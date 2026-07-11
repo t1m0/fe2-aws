@@ -3,7 +3,7 @@ data "aws_availability_zones" "available" {
 }
 
 resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
+  cidr_block           = var.vpc_cidr
   enable_dns_support   = true
   enable_dns_hostnames = true
 
@@ -15,7 +15,7 @@ resource "aws_vpc" "main" {
 resource "aws_subnet" "public" {
   count                   = var.az_count
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
+  cidr_block              = cidrsubnet(var.vpc_cidr, 8, count.index)
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
   tags = merge(local.common_tags, {
@@ -27,7 +27,7 @@ resource "aws_subnet" "public" {
 resource "aws_subnet" "private" {
   count                   = var.az_count
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index + var.az_count) # This ensures a unique CIDR range for private subnets
+  cidr_block              = cidrsubnet(var.vpc_cidr, 8, count.index + var.az_count)
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = false
   tags = merge(local.common_tags, {

@@ -24,3 +24,8 @@ variable "az_count" {
   type        = number
   default     = 2
 }
+
+variable "owner" {
+  description = "Owner tag applied to network resources"
+  type        = string
+}

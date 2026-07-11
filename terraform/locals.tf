@@ -5,5 +5,6 @@ locals {
     Environment = "prod"
     ManagedBy   = "terraform"
     Project     = local.project_name
+    Owner       = var.owner
   }
 }

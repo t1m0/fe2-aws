@@ -113,7 +113,7 @@ resource "aws_ecs_task_definition" "ecs" {
     for_each = var.volumes
     content {
       configure_at_launch = false
-      name = volume.value.name
+      name                = volume.value.name
       efs_volume_configuration {
         file_system_id     = var.file_system_id
         root_directory     = "/"

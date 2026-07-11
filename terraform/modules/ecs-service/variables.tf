@@ -171,3 +171,9 @@ variable "enable_execute_command" {
   type        = bool
   default     = false
 }
+
+variable "tags" {
+  description = "Common tags applied to taggable resources"
+  type        = map(string)
+  default     = {}
+}

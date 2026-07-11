@@ -5,6 +5,8 @@ resource "aws_efs_file_system" "main" {
   throughput_mode  = "elastic"
   encrypted        = true
 
+  tags = local.common_tags
+
   lifecycle {
     prevent_destroy = true
   }
@@ -25,7 +27,6 @@ resource "aws_security_group_rule" "efs_egress_all" {
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.efs.id
-  description       = "Allow all outbound traffic from EFS SG"
 }
 
 resource "aws_security_group_rule" "efs_ingress_from_app_and_db" {
@@ -35,7 +36,6 @@ resource "aws_security_group_rule" "efs_ingress_from_app_and_db" {
   protocol                 = "tcp"
   security_group_id        = aws_security_group.efs.id
   source_security_group_id = aws_security_group.app.id
-  description              = "Allow EFS traffic from App SG"
 }
 
 resource "aws_security_group_rule" "efs_ingress_from_db" {
@@ -45,15 +45,16 @@ resource "aws_security_group_rule" "efs_ingress_from_db" {
   protocol                 = "tcp"
   security_group_id        = aws_security_group.efs.id
   source_security_group_id = aws_security_group.db.id
-  description              = "Allow EFS traffic from DB SG"
 }
 
 resource "aws_backup_vault" "main" {
   name = "${local.project_name}-backup-vault"
+  tags = local.common_tags
 }
 
 resource "aws_backup_plan" "daily" {
   name = "${local.project_name}-daily-backup"
+  tags = local.common_tags
 
   rule {
     rule_name         = "daily-tue-sun"
@@ -91,6 +92,8 @@ resource "aws_iam_role" "backup" {
       },
     ]
   })
+
+  tags = local.common_tags
 }
 
 resource "aws_iam_role_policy_attachment" "backup" {

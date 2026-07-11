@@ -20,3 +20,8 @@ variable "permissions" {
   type    = string
   default = "0755"
 }
+
+variable "tags" {
+  type    = map(string)
+  default = {}
+}

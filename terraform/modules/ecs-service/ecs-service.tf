@@ -1,6 +1,7 @@
 resource "aws_cloudwatch_log_group" "ecs" {
   name              = "/ecs/${var.name}"
   retention_in_days = var.log_retention_days
+  tags              = var.tags
 }
 
 resource "aws_iam_role" "ecs" {
@@ -17,6 +18,8 @@ resource "aws_iam_role" "ecs" {
       }
     ]
   })
+
+  tags = var.tags
 }
 
 resource "aws_iam_role_policy" "ecs" {
@@ -95,15 +98,21 @@ resource "aws_ecs_task_definition" "ecs" {
   execution_role_arn       = var.task_execution_role_arn
   task_role_arn            = aws_iam_role.ecs.arn
   container_definitions    = jsonencode([local.container_definition])
+  tags                     = var.tags
 
   runtime_platform {
     cpu_architecture        = var.cpu_architecture
     operating_system_family = "LINUX"
   }
 
+  lifecycle {
+    ignore_changes = [container_definitions]
+  }
+
   dynamic "volume" {
     for_each = var.volumes
     content {
+      configure_at_launch = false
       name = volume.value.name
       efs_volume_configuration {
         file_system_id     = var.file_system_id
@@ -167,4 +176,5 @@ resource "aws_ecs_service" "ecs" {
     }
   }
 
+  tags = var.tags
 }

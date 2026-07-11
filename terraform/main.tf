@@ -1,8 +1,10 @@
 terraform {
+  required_version = "~> 1.15.0"
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 6.16.00"
+      version = "~> 6.54.0"
     }
   }
 
@@ -16,15 +18,10 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
-  default_tags {
-    tags = {
-      Purpose = "FE2"
-    }
-  }
 }
 
 locals {
   project_name = "fe2-app"
-  fe2_port     = 83
+  fe2_port     = 64112
   mongodb_port = 27017
 }

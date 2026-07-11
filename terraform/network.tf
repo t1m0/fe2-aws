@@ -6,6 +6,10 @@ resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-vpc"
+  })
 }
 
 resource "aws_subnet" "public" {
@@ -14,7 +18,10 @@ resource "aws_subnet" "public" {
   cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
-  tags                    = { Name = "fe2-public-subnet-${count.index + 1}" }
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-public-${count.index + 1}"
+    Tier = "public"
+  })
 }
 
 resource "aws_subnet" "private" {
@@ -23,11 +30,18 @@ resource "aws_subnet" "private" {
   cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index + var.az_count) # This ensures a unique CIDR range for private subnets
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = false
-  tags                    = { Name = "fe2-private-subnet-${count.index + 1}" }
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-private-${count.index + 1}"
+    Tier = "private"
+  })
 }
 
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-igw"
+  })
 }
 
 resource "aws_route_table" "public" {
@@ -36,6 +50,10 @@ resource "aws_route_table" "public" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.main.id
   }
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-public-rt"
+  })
 }
 
 resource "aws_route_table_association" "public" {
@@ -47,6 +65,10 @@ resource "aws_route_table_association" "public" {
 resource "aws_eip" "nat" {
   count  = var.az_count
   domain = "vpc"
+
+  tags = merge(local.common_tags, {
+    Name = format("%s-nat-eip-%d", local.project_name, count.index + 1)
+  })
 }
 
 resource "aws_nat_gateway" "main" {
@@ -54,6 +76,10 @@ resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id # NAT GW must be in a public subnet
   depends_on    = [aws_internet_gateway.main]
+
+  tags = merge(local.common_tags, {
+    Name = format("%s-nat-%d", local.project_name, count.index + 1)
+  })
 }
 
 resource "aws_route_table" "private" {
@@ -63,6 +89,10 @@ resource "aws_route_table" "private" {
     cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.main[count.index].id
   }
+
+  tags = merge(local.common_tags, {
+    Name = format("%s-private-rt-%d", local.project_name, count.index + 1)
+  })
 }
 
 resource "aws_route_table_association" "private" {
@@ -94,22 +124,38 @@ resource "aws_security_group" "alb" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-alb-sg"
+  })
 }
 
 resource "aws_security_group" "app" {
   name        = "fe2-sg"
   description = "Allow traffic to FE2 app from ALB and EFS"
   vpc_id      = aws_vpc.main.id
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-app-sg"
+  })
 }
 
 resource "aws_security_group" "db" {
   name        = "mongodb-sg"
   description = "Allow traffic to MongoDB from App SG and EFS"
   vpc_id      = aws_vpc.main.id
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-mongodb-sg"
+  })
 }
 
 resource "aws_security_group" "efs" {
   name        = "fe2-efs-sg"
   description = "Allow NFS traffic for EFS"
   vpc_id      = aws_vpc.main.id
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-efs-sg"
+  })
 }

@@ -13,6 +13,8 @@ resource "aws_iam_role" "ecs-task-execution-role" {
       }
     ]
   })
+
+  tags = local.common_tags
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
@@ -33,7 +35,7 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
           "secretsmanager:GetSecretValue"
         ]
         Resource = [
-          "*"
+          aws_secretsmanager_secret.fe2_credentials.arn
         ]
       }
     ]

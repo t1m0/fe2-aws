@@ -16,4 +16,6 @@ resource "aws_efs_access_point" "efs_access_point" {
   lifecycle {
     prevent_destroy = true
   }
+
+  tags = var.tags
 }

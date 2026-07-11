@@ -14,6 +14,8 @@ resource "aws_service_discovery_service" "mongodb" {
       type = "A"
     }
   }
+
+  tags = local.common_tags
 }
 
 module "access_point_db_data" {
@@ -24,6 +26,7 @@ module "access_point_db_data" {
   group_id       = 999
   user_id        = 999
   permissions    = "0700"
+  tags           = local.common_tags
 }
 
 module "mongodb" {
@@ -31,7 +34,7 @@ module "mongodb" {
   source                             = "./modules/ecs-service"
   aws_region                         = var.aws_region
   name                               = "mongodb"
-  image                              = "${aws_ecr_repository.mongo.repository_url}:7.0"
+  image                              = "${aws_ecr_repository.mongo.repository_url}:8.0"
   cpu                                = 2048
   memory                             = 4096
   cpu_architecture                   = "ARM64"
@@ -74,6 +77,7 @@ module "mongodb" {
       access_point_id = module.access_point_db_data[0].id
     }
   ]
+  tags = local.common_tags
 }
 
 # Security Group Rules

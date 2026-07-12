@@ -1,27 +1,35 @@
 variable "file_system_id" {
-  type = string
+  description = "ID of the EFS file system to attach the access point to"
+  type        = string
+  nullable    = false
 }
 
 variable "path" {
-  type = string
+  description = "Directory path created for the access point root"
+  type        = string
+  nullable    = false
 }
 
 variable "group_id" {
-  type    = number
-  default = 1000
+  description = "POSIX group ID assigned to the access point owner"
+  type        = number
+  default     = 1000
 }
 
 variable "user_id" {
-  type    = number
-  default = 1000
+  description = "POSIX user ID assigned to the access point owner"
+  type        = number
+  default     = 1000
 }
 
 variable "permissions" {
-  type    = string
-  default = "0755"
+  description = "File system permissions for the root directory"
+  type        = string
+  default     = "0755"
 }
 
 variable "tags" {
-  type    = map(string)
-  default = {}
+  description = "Tags applied to the access point"
+  type        = map(string)
+  default     = {}
 }

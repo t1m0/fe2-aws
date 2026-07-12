@@ -1,58 +1,74 @@
 variable "aws_region" {
-  type = string
+  description = "AWS region where the ECS service runs"
+  type        = string
+  nullable    = false
 }
 
 variable "ecs_cluster_id" {
-  type = string
+  description = "ID of the ECS cluster to attach the service to"
+  type        = string
+  nullable    = false
 }
 
 variable "name" {
-  type = string
+  description = "Short name applied to resources (log group, task family, service)"
+  type        = string
+  nullable    = false
 }
 
 variable "image" {
-  type = string
+  description = "Container image (including tag) for the task definition"
+  type        = string
+  nullable    = false
 }
 
 variable "cpu" {
-  type    = number
-  default = 512
+  description = "Fargate CPU units for the task"
+  type        = number
+  default     = 512
 }
 
 variable "memory" {
-  type    = number
-  default = 1024
+  description = "Fargate memory (MB) for the task"
+  type        = number
+  default     = 1024
 }
 
 variable "task_execution_role_arn" {
-  type = string
+  description = "IAM execution role ARN used by the task"
+  type        = string
+  nullable    = false
 }
 
 variable "ports" {
-  description = "List of ports the container exposes. Each entry requires a 'port' number and an optional 'alb_arn' to attach a load-balancer target group."
+  description = "List of container ports, with optional ALB target group ARNs for attachments"
   type = list(object({
     port    = number
     alb_arn = optional(string, null)
   }))
+  default = []
 }
 
 variable "service_registry_arn" {
-  description = "The ARN of the Service Discovery service to register with. If null, no registration occurs."
+  description = "Cloud Map service ARN for service discovery registration"
   type        = string
   default     = null
 }
 
 variable "subnets" {
-  type    = list(string)
-  default = []
+  description = "Private subnets for the ECS service ENIs"
+  type        = list(string)
+  default     = []
 }
 
 variable "security_groups" {
-  type    = list(string)
-  default = []
+  description = "Security groups assigned to the ECS service ENIs"
+  type        = list(string)
+  default     = []
 }
 
 variable "environment" {
+  description = "Environment variables injected into the container"
   type = list(object({
     name  = string
     value = string
@@ -61,6 +77,7 @@ variable "environment" {
 }
 
 variable "mountPoints" {
+  description = "Container mount point definitions (camelCase retained for compatibility)"
   type = list(object({
     sourceVolume  = string
     containerPath = string
@@ -70,12 +87,13 @@ variable "mountPoints" {
 }
 
 variable "file_system_id" {
-  type    = string
-  default = ""
+  description = "EFS file system ID backing any declared volumes"
+  type        = string
+  default     = ""
 }
 
 variable "volumes" {
-  description = "A list of volume definitions for the task, typically for EFS."
+  description = "EFS access point volume definitions referenced by mount points"
   type = list(object({
     name            = string
     access_point_id = string
@@ -84,18 +102,19 @@ variable "volumes" {
 }
 
 variable "health_check_grace_period_seconds" {
-  type    = number
-  default = 0
+  description = "Seconds ECS waits before evaluating target health during deployment"
+  type        = number
+  default     = 0
 }
 
 variable "log_retention_days" {
-  description = "Retention period for CloudWatch logs in days"
+  description = "CloudWatch Logs retention period in days"
   type        = number
   default     = 14
 }
 
 variable "health_check" {
-  description = "Container health check configuration"
+  description = "Optional container health check override"
   type = object({
     command     = list(string)
     interval    = number
@@ -106,57 +125,50 @@ variable "health_check" {
   default = null
 }
 
-variable "restart_policy" {
-  description = "Service restart policy configuration"
-  type = object({
-    max_percent             = number
-    min_percent             = number
-    circuit_breaker_enabled = bool
-  })
-  default = null
-}
-
 variable "deployment_maximum_percent" {
-  type    = number
-  default = 200
+  description = "Upper bound percentage of tasks running during a deployment"
+  type        = number
+  default     = 200
 }
 
 variable "deployment_minimum_healthy_percent" {
-  type    = number
-  default = 100
+  description = "Lower bound percentage of tasks that must remain healthy during deployment"
+  type        = number
+  default     = 100
 }
 
 variable "availability_zone_rebalancing" {
-  type    = string
-  default = "ENABLED"
+  description = "Fargate availability zone rebalancing setting"
+  type        = string
+  default     = "ENABLED"
 }
 
 variable "force_new_deployment" {
-  description = "Force a new deployment on every apply. Set to false for stateful services like databases."
+  description = "Forces service redeployment on each apply when true"
   type        = bool
   default     = false
 }
 
 variable "stop_timeout" {
-  description = "Time in seconds to wait for the container to stop gracefully before it is forcefully killed. Increase for stateful services."
+  description = "Seconds to wait for graceful container shutdown before force kill"
   type        = number
   default     = 30
 }
 
 variable "command" {
-  description = "Override the default command (CMD) for the container."
+  description = "Override container CMD"
   type        = list(string)
   default     = null
 }
 
 variable "enable_circuit_breaker" {
-  description = "Enable ECS deployment circuit breaker with automatic rollback on failure."
+  description = "Enable ECS deployment circuit breaker with automatic rollback"
   type        = bool
   default     = false
 }
 
 variable "cpu_architecture" {
-  description = "CPU architecture for the Fargate task. Must match the architecture of the container image. Valid values: X86_64, ARM64."
+  description = "CPU architecture for the Fargate task"
   type        = string
   default     = "X86_64"
 
@@ -167,13 +179,13 @@ variable "cpu_architecture" {
 }
 
 variable "enable_execute_command" {
-  description = "Enable ECS Execute Command for interactive debugging. Requires SSM VPC endpoints in the subnets."
+  description = "Enable ECS Execute Command for debugging"
   type        = bool
   default     = false
 }
 
 variable "tags" {
-  description = "Common tags applied to taggable resources"
+  description = "Tags applied to taggable ECS resources"
   type        = map(string)
   default     = {}
 }

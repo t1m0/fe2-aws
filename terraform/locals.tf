@@ -1,8 +1,14 @@
 locals {
   ecr_dns = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
 
+  alb_enable_deletion_protection = coalesce(var.alb_enable_deletion_protection, var.environment == "prod")
+  alb_access_logs_enabled = coalesce(
+    var.alb_access_logs_enabled,
+    var.environment == "prod" && var.alb_access_logs_bucket != null
+  )
+
   common_tags = {
-    Environment = "prod"
+    Environment = var.environment
     ManagedBy   = "terraform"
     Project     = local.project_name
     Owner       = var.owner

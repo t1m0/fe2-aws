@@ -81,16 +81,6 @@ module "mongodb" {
 }
 
 # Security Group Rules
-resource "aws_security_group_rule" "db_egress_all" {
-  type              = "egress"
-  from_port         = 0
-  to_port           = 0
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"] # For pulling images, etc.
-  security_group_id = aws_security_group.db.id
-  description       = "Allow all outbound traffic from DB"
-}
-
 resource "aws_security_group_rule" "db_ingress_from_app" {
   type                     = "ingress"
   from_port                = local.mongodb_port
@@ -98,5 +88,23 @@ resource "aws_security_group_rule" "db_ingress_from_app" {
   protocol                 = "tcp"
   security_group_id        = aws_security_group.db.id
   source_security_group_id = aws_security_group.app.id # Allow traffic from App SG
-  description              = "Allow DB traffic from App SG"
+  description              = "Allow MongoDB ingress from application security group"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_security_group_rule" "db_egress_nfs" {
+  type              = "egress"
+  from_port         = 2049
+  to_port           = 2049
+  protocol          = "tcp"
+  security_group_id = aws_security_group.db.id
+  cidr_blocks       = [var.vpc_cidr]
+  description       = "Allow outbound NFS traffic to VPC"
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }

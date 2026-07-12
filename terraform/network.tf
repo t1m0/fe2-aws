@@ -106,28 +106,55 @@ resource "aws_security_group" "alb" {
   name        = "fe2-alb-sg"
   description = "Allow HTTP/HTTPS traffic to ALB"
   vpc_id      = aws_vpc.main.id
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress { # Add this if you configure HTTPS listener
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
   tags = merge(local.common_tags, {
     Name = "${local.project_name}-alb-sg"
   })
+}
+
+resource "aws_security_group_rule" "alb_http_ingress" {
+  security_group_id = aws_security_group.alb.id
+  type              = "ingress"
+  description       = "Allow HTTP traffic from anywhere"
+
+  from_port   = 80
+  to_port     = 80
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_security_group_rule" "alb_https_ingress" {
+  security_group_id = aws_security_group.alb.id
+  type              = "ingress"
+  description       = "Allow HTTPS traffic from anywhere"
+
+  from_port   = 443
+  to_port     = 443
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_security_group_rule" "alb_egress_all" {
+  security_group_id = aws_security_group.alb.id
+  type              = "egress"
+  description       = "Allow all outbound traffic"
+
+  from_port   = 0
+  to_port     = 0
+  protocol    = "-1"
+  cidr_blocks = ["0.0.0.0/0"]
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_security_group" "app" {

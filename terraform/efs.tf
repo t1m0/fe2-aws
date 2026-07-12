@@ -20,22 +20,18 @@ resource "aws_efs_mount_target" "main" {
 }
 
 # Security Group Rules
-resource "aws_security_group_rule" "efs_egress_all" {
-  type              = "egress"
-  from_port         = 0
-  to_port           = 0
-  protocol          = "-1"
-  cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.efs.id
-}
-
-resource "aws_security_group_rule" "efs_ingress_from_app_and_db" {
+resource "aws_security_group_rule" "efs_ingress_from_app" {
   type                     = "ingress"
   from_port                = 2049 # NFS port
   to_port                  = 2049
   protocol                 = "tcp"
   security_group_id        = aws_security_group.efs.id
+  description              = "Allow NFS from app"
   source_security_group_id = aws_security_group.app.id
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_security_group_rule" "efs_ingress_from_db" {
@@ -44,7 +40,12 @@ resource "aws_security_group_rule" "efs_ingress_from_db" {
   to_port                  = 2049
   protocol                 = "tcp"
   security_group_id        = aws_security_group.efs.id
+  description              = "Allow NFS from DB"
   source_security_group_id = aws_security_group.db.id
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_backup_vault" "main" {

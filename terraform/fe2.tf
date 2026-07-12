@@ -127,20 +127,28 @@ module "fe2" {
 # Security Group Rules
 resource "aws_security_group_rule" "app_egress_all" {
   type              = "egress"
+  description       = "Allow outbound internet access (business requirement)"
+  security_group_id = aws_security_group.app.id
   from_port         = 0
   to_port           = 0
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.app.id
-  description       = "Allow all outbound traffic from App"
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_security_group_rule" "app_ingress_from_alb" {
   type                     = "ingress"
+  description              = "Allow service traffic from ALB"
+  security_group_id        = aws_security_group.app.id
   from_port                = local.fe2_port
   to_port                  = local.fe2_port
   protocol                 = "tcp"
-  security_group_id        = aws_security_group.app.id
-  source_security_group_id = aws_security_group.alb.id # Allow traffic from ALB
-  description              = "Allow HTTP traffic from ALB"
+  source_security_group_id = aws_security_group.alb.id
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }

@@ -52,14 +52,6 @@ module "fe2" {
   health_check_grace_period_seconds = 240
   environment = [
     {
-      name  = "FE2_EMAIL",
-      value = var.fe2_registry_email
-    },
-    {
-      name  = "FE2_PASSWORD",
-      value = var.fe2_registry_password
-    },
-    {
       name  = "FE2_ACTIVATION_NAME",
       value = "fe2_aws"
     },
@@ -86,6 +78,16 @@ module "fe2" {
     {
       name  = "FE2_PORT_MONGODB",
       value = tostring(local.mongodb_port)
+    }
+  ]
+  secrets = [
+    {
+      name      = "FE2_EMAIL"
+      valueFrom = "${aws_secretsmanager_secret.fe2_credentials.arn}:email::"
+    },
+    {
+      name      = "FE2_PASSWORD"
+      valueFrom = "${aws_secretsmanager_secret.fe2_credentials.arn}:password::"
     }
   ]
   mountPoints = [

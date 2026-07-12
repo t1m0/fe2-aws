@@ -73,6 +73,7 @@ locals {
         }
       ]
       environment = var.environment
+      secrets     = var.secrets
       mountPoints = var.mountPoints
       stopTimeout = var.stop_timeout
       command     = var.command

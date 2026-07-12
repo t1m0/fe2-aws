@@ -73,7 +73,18 @@ variable "environment" {
     name  = string
     value = string
   }))
-  default = []
+  default   = []
+  sensitive = true
+}
+
+variable "secrets" {
+  description = "Secrets injected into the container"
+  type = list(object({
+    name      = string
+    valueFrom = string
+  }))
+  default   = []
+  sensitive = true
 }
 
 variable "mountPoints" {

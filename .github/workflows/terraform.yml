@@ -7,11 +7,112 @@ on:
   pull_request:
 
 jobs:
-  terraform:
-    name: "Terraform"
+  lint:
+    name: Lint & Static Analysis
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Terraform Init (Backend)
+        env:
+          BACKEND_BUCKET: ${{ secrets.BACKEND_BUCKET }}
+          BACKEND_KEY: ${{ secrets.BACKEND_KEY }}
+        run: terraform init -backend-config="bucket=$BACKEND_BUCKET" -backend-config="key=$BACKEND_KEY" -backend-config="region=eu-central-1"
+
+      - name: terraform fmt
+        run: terraform fmt -check
+
+      - name: terraform validate
+        run: terraform validate
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v3
+        with:
+          tflint_version: latest
+
+      - name: tflint
+        run: |
+          tflint --init
+          tflint
+
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: lint
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      actions: write
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Terraform Init (Backend)
+        env:
+          BACKEND_BUCKET: ${{ secrets.BACKEND_BUCKET }}
+          BACKEND_KEY: ${{ secrets.BACKEND_KEY }}
+        run: terraform init -backend-config="bucket=$BACKEND_BUCKET" -backend-config="key=$BACKEND_KEY" -backend-config="region=eu-central-1"
+
+      - name: Terraform Plan
+        env:
+          TF_VAR_fe2_registry_email: ${{ secrets.FE2_REGISTRY_EMAIL }}
+          TF_VAR_fe2_registry_password: ${{ secrets.FE2_REGISTRY_PASSWORD }}
+          TF_VAR_docker_hub_user: ${{ secrets.DOCKER_HUB_USER }}
+          TF_VAR_docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          TF_VAR_owner: ${{ vars.TERRAFORM_OWNER }}
+        run: |
+          terraform plan -input=false -out="plan-production.tfplan"
+          terraform show -no-color plan-production.tfplan > plan-production.txt
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-production
+          path: |
+            terraform/plan-production.tfplan
+            terraform/plan-production.txt
+          retention-days: 7
+
+  apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: plan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      actions: read
+    environment: production
 
     defaults:
       run:
@@ -32,33 +133,23 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-central-1
 
-      - name: Terraform Format
-        run: terraform fmt -check
-
-      - name: Terraform Init
+      - name: Terraform Init (Backend)
         env:
           BACKEND_BUCKET: ${{ secrets.BACKEND_BUCKET }}
           BACKEND_KEY: ${{ secrets.BACKEND_KEY }}
         run: terraform init -backend-config="bucket=$BACKEND_BUCKET" -backend-config="key=$BACKEND_KEY" -backend-config="region=eu-central-1"
 
-      - name: Terraform Validate
-        run: terraform validate
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan-production
+          path: terraform
 
-      - name: Terraform Plan
+      - name: Terraform Apply (manual gate ensures human plan review)
         env:
           TF_VAR_fe2_registry_email: ${{ secrets.FE2_REGISTRY_EMAIL }}
           TF_VAR_fe2_registry_password: ${{ secrets.FE2_REGISTRY_PASSWORD }}
           TF_VAR_docker_hub_user: ${{ secrets.DOCKER_HUB_USER }}
           TF_VAR_docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
           TF_VAR_owner: ${{ vars.TERRAFORM_OWNER }}
-        run: terraform plan -input=false
-
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        env:
-          TF_VAR_fe2_registry_email: ${{ secrets.FE2_REGISTRY_EMAIL }}
-          TF_VAR_fe2_registry_password: ${{ secrets.FE2_REGISTRY_PASSWORD }}
-          TF_VAR_docker_hub_user: ${{ secrets.DOCKER_HUB_USER }}
-          TF_VAR_docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-          TF_VAR_owner: ${{ vars.TERRAFORM_OWNER }}
-        run: terraform apply -auto-approve -input=false
+        run: terraform apply -input=false "plan-production.tfplan"

@@ -1,0 +1,66 @@
+name: Terraform Drift Detection
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  drift-plan:
+    name: Check for Drift
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Terraform Init (Backend)
+        env:
+          BACKEND_BUCKET: ${{ secrets.BACKEND_BUCKET }}
+          BACKEND_KEY: ${{ secrets.BACKEND_KEY }}
+        run: terraform init -backend-config="bucket=$BACKEND_BUCKET" -backend-config="key=$BACKEND_KEY" -backend-config="region=eu-central-1"
+
+      - name: Terraform Plan (Drift)
+        env:
+          TF_VAR_fe2_registry_email: ${{ secrets.FE2_REGISTRY_EMAIL }}
+          TF_VAR_fe2_registry_password: ${{ secrets.FE2_REGISTRY_PASSWORD }}
+          TF_VAR_docker_hub_user: ${{ secrets.DOCKER_HUB_USER }}
+          TF_VAR_docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          TF_VAR_owner: ${{ vars.TERRAFORM_OWNER }}
+        run: |
+          terraform plan -input=false -out="drift-plan.tfplan"
+          terraform show -no-color drift-plan.tfplan > drift-plan.txt
+
+      - name: Upload Drift Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-drift-plan
+          path: |
+            terraform/drift-plan.tfplan
+            terraform/drift-plan.txt
+          retention-days: 7
+
+      - name: Fail if Drift Detected
+        run: |
+          if grep -q "No changes. Infrastructure is up-to-date." drift-plan.txt; then
+            echo "No drift detected."
+          else
+            echo "Drift detected." >&2
+            exit 1
+          fi

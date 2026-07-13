@@ -106,10 +106,6 @@ resource "aws_ecs_task_definition" "ecs" {
     operating_system_family = "LINUX"
   }
 
-  lifecycle {
-    ignore_changes = [container_definitions]
-  }
-
   dynamic "volume" {
     for_each = var.volumes
     content {

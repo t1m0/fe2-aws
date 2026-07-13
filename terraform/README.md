@@ -1,9 +1,9 @@
 # Terraform
 1. Install [tfenv](https://github.com/tfutils/tfenv)
-2. Install terraform 1.12.1
-3. Start using terraform 1.12.1
+2. Install terraform 1.15.0
+3. Start using terraform 1.15.0
 ```
-tfenv use 1.12.1
+tfenv use 1.15.0
 ```
 4. Init terraform workspace
 ```
@@ -24,7 +24,16 @@ terraform plan --out plan.tfplan
 ```
 terraform apply --auto-approve
 ```
-7. Update mongodb
+
+## Recovery & Backups
+
+- EFS daily (Tue–Sun, 7-day retention) and weekly (Mon, 30-day retention) backups run via AWS Backup (see `terraform/efs.tf` resources `aws_backup_plan.daily` and `aws_backup_selection.efs`).
+- Restores require the `fe2-app-backup-role` IAM role. Permissions are scoped to the configured backup vault and filesystem; review `terraform/iam.tf` for details.
+- Follow `terraform/RECOVERY.md` for the end-to-end manual restore procedure, including AWS Backup console steps, CLI commands, and post-restore ECS updates.
+- Record AWS Backup job IDs and Terraform plan/apply hashes after any restore for audit.
+
+## MongoDB Maintenance
+
 ```
 aws ecs execute-command \
   --cluster fe2-app-cluster \

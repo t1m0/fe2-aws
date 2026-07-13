@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      IMAGE_TAG: ${{ github.ref_name }}
 
     steps:
       - name: Checkout
@@ -28,8 +30,6 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build Docker image
-        env:
-          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t fe2-app-ecr:$IMAGE_TAG ./docker
 
@@ -37,7 +37,6 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: fe2-app-ecr
-          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest

@@ -35,7 +35,7 @@ module "fe2" {
   source                  = "./modules/ecs-service"
   aws_region              = var.aws_region
   name                    = "fe2"
-  image                   = "${aws_ecr_repository.main.repository_url}:2.40.247-STABLE"
+  image                   = "${aws_ecr_repository.main.repository_url}:2.41.105-STABLE"
   cpu                     = 512
   memory                  = 2048
   task_execution_role_arn = aws_iam_role.ecs-task-execution-role.arn
@@ -57,7 +57,7 @@ module "fe2" {
     },
     {
       name  = "FE2_LOG_LEVEL",
-      value = "debug"
+      value = "info"
     },
     {
       name  = "CERTBOT_ENABLED",

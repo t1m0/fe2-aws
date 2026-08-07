@@ -35,7 +35,7 @@ module "fe2" {
   source                  = "./modules/ecs-service"
   aws_region              = var.aws_region
   name                    = "fe2"
-  image                   = "${aws_ecr_repository.main.repository_url}:2.41.105-STABLE"
+  image                   = "${aws_ecr_repository.main.repository_url}:2.41.137-STABLE"
   cpu                     = 512
   memory                  = 2048
   task_execution_role_arn = aws_iam_role.ecs-task-execution-role.arn

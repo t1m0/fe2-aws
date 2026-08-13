@@ -25,12 +25,3 @@ output "public_route_table_name" {
 output "private_route_table_names" {
   value = [for rt in aws_route_table.private : rt.tags["Name"]]
 }
-
-output "interface_vpc_endpoint_ids" {
-  description = "Interface endpoint IDs for private ECR/S3 access"
-  value = {
-    ecr_api = aws_vpc_endpoint.ecr_api.id
-    ecr_dkr = aws_vpc_endpoint.ecr_dkr.id
-    s3      = aws_vpc_endpoint.s3_interface.id
-  }
-}

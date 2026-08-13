@@ -24,6 +24,17 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
   })
 }
 
+resource "aws_vpc_endpoint" "s3_gateway" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = aws_route_table.private[*].id
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-s3-gateway-endpoint"
+  })
+}
+
 resource "aws_vpc_endpoint" "s3_interface" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.s3"
@@ -35,4 +46,6 @@ resource "aws_vpc_endpoint" "s3_interface" {
   tags = merge(local.common_tags, {
     Name = "${local.project_name}-s3-endpoint"
   })
+
+  depends_on = [aws_vpc_endpoint.s3_gateway]
 }

@@ -34,7 +34,7 @@ module "mongodb" {
   source                             = "./modules/ecs-service"
   aws_region                         = var.aws_region
   name                               = "mongodb"
-  image                              = "${aws_ecr_repository.mongo.repository_url}:8.0"
+  image                              = "${aws_ecr_repository.mongo.repository_url}:8.3.8"
   cpu                                = 2048
   memory                             = 4096
   cpu_architecture                   = "ARM64"

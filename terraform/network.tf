@@ -186,3 +186,55 @@ resource "aws_security_group" "efs" {
     Name = "${local.project_name}-efs-sg"
   })
 }
+
+resource "aws_security_group" "ecr_endpoints" {
+  name        = "${local.project_name}-ecr-endpoints-sg"
+  description = "Allow HTTPS from ECS tasks to interface endpoints"
+  vpc_id      = aws_vpc.main.id
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-ecr-endpoints-sg"
+  })
+}
+
+resource "aws_security_group_rule" "ecr_endpoint_https_from_app" {
+  type                     = "ingress"
+  description              = "Allow HTTPS from app tasks"
+  security_group_id        = aws_security_group.ecr_endpoints.id
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.app.id
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_security_group_rule" "ecr_endpoint_https_from_db" {
+  type                     = "ingress"
+  description              = "Allow HTTPS from MongoDB tasks"
+  security_group_id        = aws_security_group.ecr_endpoints.id
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.db.id
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_security_group_rule" "ecr_endpoint_https_egress" {
+  type              = "egress"
+  description       = "Allow return traffic from interface endpoints"
+  security_group_id = aws_security_group.ecr_endpoints.id
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}

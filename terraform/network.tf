@@ -238,3 +238,17 @@ resource "aws_security_group_rule" "ecr_endpoint_https_egress" {
     create_before_destroy = true
   }
 }
+
+resource "aws_security_group_rule" "db_egress_ecr" {
+  type                     = "egress"
+  description              = "Allow MongoDB tasks to reach interface endpoints over HTTPS"
+  security_group_id        = aws_security_group.db.id
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.ecr_endpoints.id
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}

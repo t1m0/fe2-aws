@@ -4,6 +4,12 @@ FROM alamosgmbh/fe2:2.41.137-STABLE
 # Install libc6-compat to fix "Error loading shared library ld-linux-x86-64.so.2"
 RUN apk add --no-cache libc6-compat
 
+# Set timezone to Berlin
+ENV TZ=Europe/Berlin
+RUN apk add --no-cache tzdata \
+    && cp /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone
+
 # Copy the default logging configuration into a staging directory in the image
 COPY logback.xml /opt/fe2/defaults/logback.xml
 

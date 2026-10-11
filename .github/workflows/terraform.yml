@@ -92,19 +92,31 @@ jobs:
         env:
           TF_VAR_fe2_registry_email: ${{ secrets.FE2_REGISTRY_EMAIL }}
           TF_VAR_fe2_registry_password: ${{ secrets.FE2_REGISTRY_PASSWORD }}
-          TF_VAR_docker_hub_user: ${{ secrets.DOCKER_HUB_USER }}
-          TF_VAR_docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
           TF_VAR_owner: ${{ vars.TERRAFORM_OWNER }}
         run: |
           terraform plan -input=false -out="plan-production.tfplan"
           terraform show -no-color plan-production.tfplan > plan-production.txt
+
+      # The binary plan embeds variable values and state in plaintext, and
+      # artifacts on a public repo are downloadable, so only upload it encrypted.
+      - name: Encrypt Plan
+        env:
+          PLAN_PASSPHRASE: ${{ secrets.PLAN_PASSPHRASE }}
+        run: |
+          if [ -z "$PLAN_PASSPHRASE" ]; then
+            echo "PLAN_PASSPHRASE secret is not set." >&2
+            exit 1
+          fi
+          printf '%s' "$PLAN_PASSPHRASE" | gpg --batch --pinentry-mode loopback \
+            --passphrase-fd 0 --symmetric --cipher-algo AES256 plan-production.tfplan
+          rm plan-production.tfplan
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan-production
           path: |
-            terraform/plan-production.tfplan
+            terraform/plan-production.tfplan.gpg
             terraform/plan-production.txt
           retention-days: 7
 
@@ -151,11 +163,17 @@ jobs:
           name: terraform-plan-production
           path: terraform
 
+      - name: Decrypt Plan
+        env:
+          PLAN_PASSPHRASE: ${{ secrets.PLAN_PASSPHRASE }}
+        run: |
+          printf '%s' "$PLAN_PASSPHRASE" | gpg --batch --pinentry-mode loopback \
+            --passphrase-fd 0 --output plan-production.tfplan \
+            --decrypt plan-production.tfplan.gpg
+
       - name: Terraform Apply (manual gate ensures human plan review)
         env:
           TF_VAR_fe2_registry_email: ${{ secrets.FE2_REGISTRY_EMAIL }}
           TF_VAR_fe2_registry_password: ${{ secrets.FE2_REGISTRY_PASSWORD }}
-          TF_VAR_docker_hub_user: ${{ secrets.DOCKER_HUB_USER }}
-          TF_VAR_docker_hub_password: ${{ secrets.DOCKER_HUB_PASSWORD }}
           TF_VAR_owner: ${{ vars.TERRAFORM_OWNER }}
         run: terraform apply -input=false "plan-production.tfplan"

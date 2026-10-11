@@ -35,10 +35,10 @@ module "mongodb" {
   aws_region                         = var.aws_region
   name                               = "mongodb"
   image                              = "${aws_ecr_repository.mongo.repository_url}:8.0"
-  cpu                                = 2048
-  memory                             = 4096
+  cpu                                = 1024
+  memory                             = 2048
   cpu_architecture                   = "ARM64"
-  command                            = ["mongod", "--wiredTigerCacheSizeGB", "1.5"]
+  command                            = ["mongod", "--wiredTigerCacheSizeGB", "1"]
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
   availability_zone_rebalancing      = "DISABLED"

@@ -28,6 +28,7 @@ terraform apply --auto-approve
 ## Recovery & Backups
 
 - EFS daily (Tue–Sun, 7-day retention) and weekly (Mon, 30-day retention) backups run via AWS Backup (see `terraform/efs.tf` resources `aws_backup_plan.daily` and `aws_backup_selection.efs`).
+- MongoDB is dumped daily at 03:00 UTC with `mongodump` to `/backup/mongodb` on EFS (see `terraform/mongodb-backup.tf`), so every AWS Backup recovery point contains a consistent database archive. The raw MongoDB data files in a recovery point are not guaranteed to be restorable.
 - Restores require the `fe2-app-backup-role` IAM role. Permissions are scoped to the configured backup vault and filesystem; review `terraform/iam.tf` for details.
 - Follow `terraform/RECOVERY.md` for the end-to-end manual restore procedure, including AWS Backup console steps, CLI commands, and post-restore ECS updates.
 - Record AWS Backup job IDs and Terraform plan/apply hashes after any restore for audit.

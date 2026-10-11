@@ -102,6 +102,51 @@ Wait for the `Status` field to reach `COMPLETED` before proceeding.
 2. Run `terraform -chdir=terraform plan` to confirm the updates align with expected resource changes.
 3. Apply the validated plan (`terraform -chdir=terraform apply`) and monitor the ECS service deployment in the console.
 
+## MongoDB Restore From Dump
+The EFS recovery point contains the live MongoDB data files, which are not guaranteed to be consistent. Treat the `mongodump` archives under `/backup/mongodb` as the database backup of record. The `mongodb-backup-task` task (see `terraform/mongodb-backup.tf`) writes one archive per day at 03:00 UTC and keeps 7 days on the filesystem; older ones are available through the AWS Backup recovery points.
+
+1. Capture the network settings used by the backup task:
+   ```bash
+   SUBNET_ID=$(aws ec2 describe-subnets \
+     --filters "Name=tag:Name,Values=fe2-app-private-1" \
+     --query 'Subnets[0].SubnetId' \
+     --output text)
+   BACKUP_SG_ID=$(aws ec2 describe-security-groups \
+     --filters "Name=tag:Name,Values=fe2-app-mongodb-backup-sg" \
+     --query 'SecurityGroups[0].GroupId' \
+     --output text)
+   NETWORK="awsvpcConfiguration={subnets=[${SUBNET_ID}],securityGroups=[${BACKUP_SG_ID}],assignPublicIp=DISABLED}"
+   ```
+2. List the available archives. Each backup run prints the directory listing at the end of its log:
+   ```bash
+   aws logs tail /ecs/mongodb-backup --since 2d
+   ```
+   To take a fresh dump on demand, run the task without overrides:
+   ```bash
+   aws ecs run-task --cluster fe2-app-cluster --launch-type FARGATE \
+     --task-definition mongodb-backup-task \
+     --network-configuration "${NETWORK}"
+   ```
+3. Stop FE2 so nothing writes during the restore:
+   ```bash
+   aws ecs update-service --cluster fe2-app-cluster --service fe2-service --desired-count 0
+   ```
+4. Restore the chosen archive into the running MongoDB service. `--drop` replaces existing collections:
+   ```bash
+   ARCHIVE="fe2-YYYYMMDDTHHMMSSZ.archive.gz"
+   aws ecs run-task --cluster fe2-app-cluster --launch-type FARGATE \
+     --task-definition mongodb-backup-task \
+     --network-configuration "${NETWORK}" \
+     --overrides "{\"containerOverrides\":[{\"name\":\"mongodb-backup-container\",\"command\":[\"bash\",\"-c\",\"mongorestore --host \\\"\$MONGODB_HOST\\\" --port \\\"\$MONGODB_PORT\\\" --gzip --archive=/backup/${ARCHIVE} --drop\"]}]}"
+   ```
+   Follow the result with `aws logs tail /ecs/mongodb-backup --follow` and confirm the task exits with code 0.
+5. Start FE2 again and verify the application:
+   ```bash
+   aws ecs update-service --cluster fe2-app-cluster --service fe2-service --desired-count 1
+   ```
+
+When the archive is only available in an AWS Backup recovery point, restore the filesystem first (sections above), point the `db-backup-vol` access point at the restored filesystem, then continue from step 2.
+
 ## Cleanup
 - After application validation, decommission the original filesystem:
   ```bash
